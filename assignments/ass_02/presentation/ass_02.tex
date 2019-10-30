@@ -1,0 +1,95 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage{graphicx}
+\usepackage{listings}
+\usepackage{xcolor}
+
+\usepackage{amsmath}
+\usepackage{centernot}
+
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+\lstdefinestyle{mystyle}{
+    backgroundcolor=\color{backcolour},   
+    commentstyle=\color{codegreen},
+    keywordstyle=\color{magenta},
+    numberstyle=\tiny\color{codegray},
+    stringstyle=\color{codepurple},
+    basicstyle=\ttfamily\footnotesize,
+    breakatwhitespace=false,         
+    breaklines=true,                 
+    captionpos=b,                    
+    keepspaces=true,                 
+    numbers=left,                    
+    numbersep=5pt,                  
+    showspaces=false,                
+    showstringspaces=false,
+    showtabs=false,                  
+    tabsize=2
+}
+\lstset{style=mystyle}
+\graphicspath{{./presentation_figures/}}
+
+\title{MLPR 2019 - Assignment 2}
+\author{Vasilis Gkolemis, Sokratis Lyras}
+
+\date{October 2019}
+
+\begin{document}
+
+\maketitle
+
+\section{Question 1}
+\subsection{Question 1a}
+
+$y_{tr}^{0}, y_{val}^{0}, y_{test}^{0}$ are all drawn from the same distribution $y$ which has mean $\mu$ and variance $\sigma^2$. $N_{tr}, N_{val}, N_{test}$ are the number of examples in each set.
+Firstly, $\mu, \sigma^2$ were estimated, with:
+\begin{itemize}
+    \item $\displaystyle \mu \approx \frac{1}{N_{tr}} \sum_{i=1}^{N_{tr}} y_{tr}^{(0)(i)} = \tilde{\mu_{tr}} $
+    
+    \item $\displaystyle \sigma^2 \approx \frac{1}{N_{tr}-1} \sum_{i=1}^{N_{tr}} (y_{tr}^{(i)} - \tilde{\mu})^2 = \tilde{\sigma_{tr}}^2$
+\end{itemize}
+
+and so the vectors we have in our hands are:
+
+\begin{itemize}
+    \item $y_{tr} = \dfrac{y_{tr}^{0} - \tilde{\mu_{tr}}}{\tilde{\sigma_{tr}}}$ 
+    \item $y_{val} = \dfrac{y_{val}^{0} - \tilde{\mu_{tr}}}{\tilde{\sigma_{tr}}}$ 
+    \item $y_{test} = \dfrac{y_{test}^{0} - \tilde{\mu_{tr}}}{\tilde{\sigma_{tr}}}$ 
+\end{itemize}
+
+We estimate the mean of $y_{val}$:
+
+$$ \displaystyle \mu_{val} \approx \frac{1}{N_{val}} \sum_{i=1}^{N_{val}} y_{val}^{(i)} = \tilde{\mu_{val}} $$
+
+The standard error of $\mu_{val}$ is:
+
+$$ \sqrt{VAR(\tilde{\mu_{val}})} = 
+\displaystyle \frac{\sigma_{val}}{\sqrt{N_{val}}} 
+\approx \displaystyle \frac{\tilde{\sigma}_{val}}{\sqrt{N_{val}}}$$ 
+
+where,
+
+$$ \displaystyle \tilde{\sigma}_{val}^2 = \frac{1}{N_{val}-1} \sum_{i=1}^{N_{val}} (y_{val}^{(i)} - \tilde{\mu}_{val})^2 $$
+
+Now we compute these values using the data:
+\begin{itemize}
+    \item $ \tilde{\sigma}_{val}^2 = 0.982 $
+    \item $ \tilde{\mu_{val}} = - 0.216 \pm 0.013 $
+\end{itemize}
+
+For the first $5785$ samples of the training set:
+\begin{itemize}
+    \item $ \tilde{\sigma}_{tr}^2 = -0.442 $
+    \item $ \tilde{\mu_{tr}} = - 0.442 \pm 0.012 $
+\end{itemize}
+
+As is easily observed, the estimated mean based in the first $5785$ examples of the training set is misleading. This happens because the examples are not i.i.d as we supposed.
+
+If we enforce the samples to be i.i.d. through a random shuffling (we will use the shuffle only for this question, afterwards we will recover the initial training set) we observe that the estimation of mean and the standard error are as expected even with much less samples. Actually, if we sample randomly $N=500$ examples from the training set, estimate the mean and the standard error and repeat this procedure we observe the results are as expected.
+
+
+
+\end{document}
