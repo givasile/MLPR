@@ -141,7 +141,7 @@ def fit_logreg_gradopt(X, yy, alpha):
     return ww, bb
 
 
-def fit_cnn_gradopt(X, yy, alpha):
+def fit_cnn_gradopt(X, yy, alpha, params = None):
     """
     fit a regularized logistic regression model with gradient opt
 
@@ -163,7 +163,12 @@ def fit_cnn_gradopt(X, yy, alpha):
     """
     D = X.shape[1]
     args = (X, yy, alpha)
-    init = (np.random.randn(D, 10), np.zeros(10), np.random.randn(10), np.array(0))
+    if params is None:
+        init = (np.random.randn(10), np.array(0), np.random.randn(10, D), np.zeros(10))
+    else:
+        init = params
+
+
     ww1, bb1, ww2, bb2 = minimize_list(nn_cost, init, args)
     return ww1, bb1, ww2, bb2
 
