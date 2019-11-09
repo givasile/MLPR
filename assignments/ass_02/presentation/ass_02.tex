@@ -42,39 +42,64 @@
 \maketitle
 
 \section*{Question 1}
+
+We load the data and store it in appropriate numpy arrays:
+
+\begin{lstlisting}[language = Python]
+_filepath = os.path.abspath('./../../../data/ass_02/ct_data.mat')
+_data = io.loadmat(_filepath)
+
+X_train = _data['X_train']
+X_val = _data['X_val']
+X_test = _data['X_test']
+
+y_train = _data['y_train']
+y_val = _data['y_val']
+y_test = _data['y_test']
+\end{lstlisting}
+
 \subsection*{Question 1a}
 
-$y_{tr}^{0}, y_{val}^{0}, y_{test}^{0}$ are all drawn from the same distribution $y$ which has mean $\mu$ and variance $\sigma^2$. $N_{tr}, N_{val}, N_{test}$ are the number of examples in each set.
-Firstly, $\mu, \sigma^2$ were estimated, with:
-\begin{itemize}
-    \item $\displaystyle \mu \approx \frac{1}{N_{tr}} \sum_{i=1}^{N_{tr}} y_{tr}^{(0)(i)} = \tilde{\mu_{tr}} $
-    
-    \item $\displaystyle \sigma^2 \approx \frac{1}{N_{tr}-1} \sum_{i=1}^{N_{tr}} (y_{tr}^{(i)} - \tilde{\mu})^2 = \tilde{\sigma_{tr}}^2$
-\end{itemize}
+We verify that the mean of $y\_train$ is zero (up to numerical rounding errors) while the mean of $y\_val$ is not zero.
 
-and so the vectors we have in our hands are:
+\begin{lstlisting}[language = Python]
+np.mean(y_train) # -9.13868774539957e-15
+np.mean(y_val)   # -0.2160085093241599
+\end{lstlisting}
 
-\begin{itemize}
-    \item $y_{tr} = \dfrac{y_{tr}^{0} - \tilde{\mu_{tr}}}{\tilde{\sigma_{tr}}}$ 
-    \item $y_{val} = \dfrac{y_{val}^{0} - \tilde{\mu_{tr}}}{\tilde{\sigma_{tr}}}$ 
-    \item $y_{test} = \dfrac{y_{test}^{0} - \tilde{\mu_{tr}}}{\tilde{\sigma_{tr}}}$ 
-\end{itemize}
 
-We estimate the mean of $y_{val}$:
+We estimate the mean $\tilde{\mu}$ and the standard error $s$ of vector $y$ with the following types:
 
-$$ \displaystyle \mu_{val} \approx \frac{1}{N_{val}} \sum_{i=1}^{N_{val}} y_{val}^{(i)} = \tilde{\mu_{val}} $$
+$$ \displaystyle \tilde{\mu} = \frac{1}{N} \sum_{i=1}^{N} y^{(i)} \approx \mu $$
 
-The standard error of $\mu_{val}$ is:
+The standard error $s$ of the estimation $\tilde{\mu}$ is:
 
-$$ \sqrt{VAR(\tilde{\mu_{val}})} = 
-\displaystyle \frac{\sigma_{val}}{\sqrt{N_{val}}} 
-\approx \displaystyle \frac{\tilde{\sigma}_{val}}{\sqrt{N_{val}}}$$ 
+$$ s = \sqrt{VAR(\tilde{\mu})} = 
+\displaystyle \frac{\sigma}{\sqrt{N}} 
+\approx \displaystyle \frac{\tilde{\sigma}}{\sqrt{N}}$$ 
 
 where,
 
-$$ \displaystyle \tilde{\sigma}_{val}^2 = \frac{1}{N_{val}-1} \sum_{i=1}^{N_{val}} (y_{val}^{(i)} - \tilde{\mu}_{val})^2 $$
+$$ \displaystyle \tilde{\sigma}^2 = \frac{1}{N-1} \sum_{i=1}^{N} (y^{(i)} - \tilde{\mu})^2 $$
 
-Now we compute these values using the data:
+
+We compute the mean with standard error of the $y\_val$ vector and of the first $N = 5785$ elements of $y\_train$ vector with the following code:
+
+\begin{lstlisting}[language = Python]
+def mean_with_sterror(x):
+    m = x.mean()
+    sigma = x.std(ddof = 1)
+    sterror = sigma / np.sqrt(x.shape[0])
+    return m, sterror
+
+m, err = mean_with_sterror(y_val)
+# m = -0.2160085093241599, err = 0.01290449880016868
+N = 5785
+m, err = mean_with_sterror(y_train[:N])
+# m = 0.01290449880016868, err = 0.011927303389170828
+\end{lstlisting}
+
+For the validation set:
 \begin{itemize}
     \item $ \tilde{\sigma}_{val}^2 = 0.982 $
     \item $ \tilde{\mu_{val}} = - 0.216 \pm 0.013 $
@@ -86,21 +111,26 @@ For the first $5785$ samples of the training set:
     \item $ \tilde{\mu_{tr}} = - 0.442 \pm 0.012 $
 \end{itemize}
 
-As is easily observed, the estimated mean based in the first $5785$ examples of the training set is misleading. This happens because the examples are not i.i.d as we supposed.
 
-We hold a simple experiment to show that if we enforce the samples to be i.i.d. the results become as expected. We randomly sample $N = 500$ (much less than $5785$) examples from the training set and we compute their mean $\mu^{(i)}$ and standard error $s^{(i)}$. We repeat this random process $1000$ times. Finally, we compute the mean and standard deviation of the means and standard errors. The results, for means:
+\subsubsection*{Explanation of the misleading results}
 
-$$ \displaystyle  \mu_1 = \frac{1}{1000} \sum_{i=1}^{1000} \mu^{(i)} = -0.001 $$
+As is easily observed, the estimated mean based in the first $5785$ examples of the training set is misleading. This happens because the values are not randomly distributed inside the array.
 
-$$ \displaystyle \sqrt{  \frac{1}{1000 - 1} \sum_{i=1}^{1000} (\mu_i - \mu_1)^2} = 0.045 $$
+We hold a simple experiment to show that if we randomly pick a subset of the training set, the results are as expected. We randomly sample $N = 500$ (much less than $5785$) examples from the training set and we compute their mean $\mu^{(i)}$ and standard error $s^{(i)}$. We repeat this random process $1000$ times. Finally, we compute the mean and standard deviation of the means and standard errors. 
+
+The results, for means:
+
+$$ \displaystyle  E[\mu] = \frac{1}{1000} \sum_{i=1}^{1000} \mu^{(i)} = -0.001 $$
+
+$$ \displaystyle s_\mu = \sqrt{  \frac{1}{1000 - 1} \sum_{i=1}^{1000} (\mu_i - \mu_1)^2} = 0.045 $$
 
 and for standard error:
 
-$$ \displaystyle  \mu_{s} = \frac{1}{1000} \sum_{i=1}^{1000} s^{(i)} = 0.045 $$
+$$ \displaystyle  E[s] = \frac{1}{1000} \sum_{i=1}^{1000} s^{(i)} = 0.045 $$
 
-$$ \displaystyle \sqrt{  \frac{1}{1000 - 1} \sum_{i=1}^{1000} (s_i - \mu_{s})^2} = 0.001 $$
+$$ \displaystyle s_s = \sqrt{  \frac{1}{1000 - 1} \sum_{i=1}^{1000} (s_i - \mu_{s})^2} = 0.001 $$
 
-We provide the code snippet for reproduction purposes:
+We provide the code for this small experiment:
 
 \begin{lstlisting}[language = Python]
 list_m = []
@@ -147,7 +177,7 @@ ind_duplicate_features = np.sort(np.unique(ind_duplicate_features))
 
 Duplicates columns are: $ 69,  78,  79, 179, 188, 189, 199, 287, 351, 359 $
 
-We exclude constant and duplicate columns:
+We exclude constant and duplicate columns.
 
 
 \section*{Question 2}
@@ -240,6 +270,39 @@ We observe that the Root Mean Square Errors are almost identical as expected. Th
 
 \section*{Question 3}
 
+\subsubsection*{Question 3a}
+
+With the following routine we project the data with a random projection matrix, we fit them using fitlinreg and we measure the RMSE:
+
+\begin{lstlisting}[language=Python]
+def fit_and_measure_on_projection(K):
+    alpha = 10
+    proj_mat = random_proj(D, K)
+
+    # projected X
+    X_train_proj = np.dot(X_train, proj_mat)
+    X_val_proj = np.dot(X_val, proj_mat)
+
+    results = {"K": K}
+
+    # fitting
+    W_lstsq_proj, b_lstsq_proj = fit_linreg(X_train_proj, y_train, alpha)
+
+    # RMSE
+    results['RMSE_lstsq_tr'] = compute_RMSE(X_train_proj, y_train, W_lstsq_proj, b_lstsq_proj)
+    results['RMSE_lstsq_val'] = compute_RMSE(X_val_proj, y_val, W_lstsq_proj, b_lstsq_proj)
+    
+    return results
+
+K = 10
+q3a_results_proj_10 = fit_and_measure_on_projection(K)
+
+K = 100
+q3a_results_proj_100 = fit_and_measure_on_projection(K)
+\end{lstlisting}
+
+
+The errors we obtained are the following:
 \begin{center}
 \begin{tabular}{ | c | c | c | }
 \hline
@@ -248,8 +311,6 @@ We observe that the Root Mean Square Errors are almost identical as expected. Th
  & Training & Validation \\
 \hline
 Least Squares & 0.76299 & 0.80863\\ 
-\hline
-Gradient & 0.76299 & 0.80862 \\ 
 \hline
 
 \hline 
@@ -261,12 +322,20 @@ Gradient & 0.76299 & 0.80862 \\
 \hline
 Least Squares & 0.47499 & 0.50218 \\ 
 \hline
-Gradient & 0.47499 & 0.50135 \\ 
-\hline
 \end{tabular}
 \end{center}
+
+
+As we reduce the dimensionality, the new training error must be larger or equal than before. Since our input matrix $X\_train$ is full rank as we checked, every feature gives information, so reducing the dimensionality leads to strictly higher error.
+
+
+\subsubsection*{Question 3b}
+
+It is clear that a very big fraction of feature 46 is either $0$ or $-0.25$. More specifically, in the whole training set almost $80.36\%$ of the examples are either $0$ or $-0.25$.
+
+\includegraphics[scale=0.75]{fig_01.pdf}
+
+
+We fit and retrain
+
 \end{document}
-
-
-Logical, we reduce the dimensionality of input space in a random way. Important information may be lost.
-
