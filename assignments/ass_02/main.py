@@ -10,7 +10,6 @@ plt.rc('font', family='serif')
 
 # import data
 _filepath = os.path.abspath('./../../../data/ass_02/ct_data.mat')
-assert os.path.exists(_filepath), 'Please download the dataset. I cannot find it at: %s' % (_filepath)
 _data = io.loadmat(_filepath)
 
 X_train = _data['X_train']
@@ -28,6 +27,11 @@ N_test = X_test.shape[0]
 
 ############################### Question 1 ###################################
 # question 1a
+
+q1a1 = np.mean(y_train)
+q1a2 = np.mean(y_val)
+
+
 def mean_with_sterror(x):
     m = x.mean()
     sigma = x.std(ddof = 1)
@@ -35,12 +39,12 @@ def mean_with_sterror(x):
     return m, sterror
 
 
-m, err = mean_with_sterror(y_val)
-print("Mean estimation of y_val is : %.3f with standard error: %.3f" %(m, err))
+q1a3_m, q1a3_err = mean_with_sterror(y_val)
+print("Mean estimation of y_val is : %.3f with standard error: %.3f" %(q1a3_m, q1a3_err))
 
 N = 5785
-m, err = mean_with_sterror(y_train[:N])
-print("Mean estimation of first %d values of y_train is : %.3f with standard error: %.3f" %(N, m, err))
+q1a4_m, q1a4_err = mean_with_sterror(y_train[:N])
+print("Mean estimation of first %d values of y_train is : %.3f with standard error: %.3f" %(N, q1a4_m, q1a4_err))
 
 def small_experiment():
     list_m = []
@@ -132,13 +136,13 @@ def compute_RMSE(X, y, w, b):
     RMSE = np.sqrt(np.mean(square_erros))
     return RMSE
 
-RMSE_lstsq_tr = compute_RMSE(X_train, y_train, W_lstsq, b_lstsq)
-RMSE_lstsq_val = compute_RMSE(X_val, y_val, W_lstsq, b_lstsq)
-RMSE_lstsq_test = compute_RMSE(X_test, y_test, W_lstsq, b_lstsq)
+q2_RMSE_lstsq_tr = compute_RMSE(X_train, y_train, W_lstsq, b_lstsq)
+q2_RMSE_lstsq_val = compute_RMSE(X_val, y_val, W_lstsq, b_lstsq)
+q2_RMSE_lstsq_test = compute_RMSE(X_test, y_test, W_lstsq, b_lstsq)
 
-RMSE_grad_tr = compute_RMSE(X_train, y_train, W_grad, b_grad)
-RMSE_grad_val = compute_RMSE(X_val, y_val, W_grad, b_grad)
-RMSE_grad_test = compute_RMSE(X_test, y_test, W_grad, b_grad)
+q2_RMSE_grad_tr = compute_RMSE(X_train, y_train, W_grad, b_grad)
+q2_RMSE_grad_val = compute_RMSE(X_val, y_val, W_grad, b_grad)
+q2_RMSE_grad_test = compute_RMSE(X_test, y_test, W_grad, b_grad)
 
 
 ############################ Question 3 ##################################
@@ -179,7 +183,7 @@ q3a_results_proj_100 = fit_and_measure_on_projection(K)
 # Question 3ii
 _save_filename_png = os.path.abspath("./presentation/presentation_figures/fig_01.pdf")
 plt.figure()
-plt.title("Histogram of feature 45")
+plt.title("Histogram of feature 46")
 plt.hist(X_train[45].ravel(), bins=30)
 plt.xlabel('value')
 plt.ylabel('number of samples')
