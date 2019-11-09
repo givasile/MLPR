@@ -41,8 +41,8 @@
 
 \maketitle
 
-\section{Question 1}
-\subsection{Question 1a}
+\section*{Question 1}
+\subsection*{Question 1a}
 
 $y_{tr}^{0}, y_{val}^{0}, y_{test}^{0}$ are all drawn from the same distribution $y$ which has mean $\mu$ and variance $\sigma^2$. $N_{tr}, N_{val}, N_{test}$ are the number of examples in each set.
 Firstly, $\mu, \sigma^2$ were estimated, with:
@@ -88,8 +88,185 @@ For the first $5785$ samples of the training set:
 
 As is easily observed, the estimated mean based in the first $5785$ examples of the training set is misleading. This happens because the examples are not i.i.d as we supposed.
 
-If we enforce the samples to be i.i.d. through a random shuffling (we will use the shuffle only for this question, afterwards we will recover the initial training set) we observe that the estimation of mean and the standard error are as expected even with much less samples. Actually, if we sample randomly $N=500$ examples from the training set, estimate the mean and the standard error and repeat this procedure we observe the results are as expected.
+We hold a simple experiment to show that if we enforce the samples to be i.i.d. the results become as expected. We randomly sample $N = 500$ (much less than $5785$) examples from the training set and we compute their mean $\mu^{(i)}$ and standard error $s^{(i)}$. We repeat this random process $1000$ times. Finally, we compute the mean and standard deviation of the means and standard errors. The results, for means:
+
+$$ \displaystyle  \mu_1 = \frac{1}{1000} \sum_{i=1}^{1000} \mu^{(i)} = -0.001 $$
+
+$$ \displaystyle \sqrt{  \frac{1}{1000 - 1} \sum_{i=1}^{1000} (\mu_i - \mu_1)^2} = 0.045 $$
+
+and for standard error:
+
+$$ \displaystyle  \mu_{s} = \frac{1}{1000} \sum_{i=1}^{1000} s^{(i)} = 0.045 $$
+
+$$ \displaystyle \sqrt{  \frac{1}{1000 - 1} \sum_{i=1}^{1000} (s_i - \mu_{s})^2} = 0.001 $$
+
+We provide the code snippet for reproduction purposes:
+
+\begin{lstlisting}[language = Python]
+list_m = []
+list_stderr = []
+np.random.seed(2)
+N = 500
+y_train_tmp = copy.deepcopy(y_train)
+for i in range(1000):
+    np.random.shuffle(y_train_tmp)
+    m, err = mean_with_sterror(y_train_tmp[:N])
+    list_m.append(m)
+    list_stderr.append(err)
+
+print("Mean estimation of y_train from %d iid samples, in 1000 different executions has mean: %.3f and standard deviation: %.3f" %(N, np.mean(list_m), np.std(list_m, ddof=1)))
+
+print("Standard error estimation of y_train from %d iid samples, in 1000 different executions has mean: %.3f and standard deviation: %.3f" %(N, np.mean(list_stderr), np.std(list_stderr, ddof = 1)))
+\end{lstlisting}
+
+\subsubsection*{Question 1b}
+
+We use python, so our indices are zero-based. 
+The code for identifying constant features:
+\begin{lstlisting}[language = Python]
+threshold = 10e-10
+ind_const_features = np.where(X_train.var(0) <= threshold)[0]
+# array([ 59,  69, 179, 189, 351])
+\end{lstlisting}
+Constant columns are: $\{59,  69, 179, 189, 351\}$
 
 
+The code for identifying duplicates:
+\begin{lstlisting}[language = Python]
+duplicates = []
+for j in range(X_train.shape[1]):
+    f1 = X_train[:,j]
+    tmp = X_train[:, j+1:] - np.expand_dims(f1, -1)
+    indices = np.where((np.var(tmp, 0) <= threshold))[0] + j + 1
+    duplicates.append(indices)
 
+ind_duplicate_features = np.concatenate(duplicates).ravel()
+ind_duplicate_features = np.sort(np.unique(ind_duplicate_features))
+# array([ 69,  78,  79, 179, 188, 189, 199, 287, 351, 359])
+\end{lstlisting}
+
+Duplicates columns are: $ 69,  78,  79, 179, 188, 189, 199, 287, 351, 359 $
+
+We exclude constant and duplicate columns:
+
+
+\section*{Question 2}
+
+We create a function that fits the learnable parameters to the data. Firstly, we create an augmented version of X matrix:
+
+$$ \displaystyle
+X_{aug} = \begin{vmatrix}
+    X_{train} & \textbf{1} \\
+    \sqrt{a}I_D & \textbf{0} 
+\end{vmatrix}
+$$
+
+Afterwards we use np.linalg.lstsq routine to compute the optimal parameters $\textbf{w}, b$. This is done inside the following function:
+
+\begin{lstlisting}[language= Python]
+def fit_linreg(X, yy, alpha):
+    # data augmentation
+    D = X.shape[1]
+    N = X.shape[0]
+    
+    reg = np.sqrt(alpha) * np.eye(D, D)
+    X1 = np.concatenate( (X, np.ones((N, 1)) ), axis = 1)
+    reg1 = np.concatenate( (reg, np.zeros((reg.shape[1], 1)) ), axis = 1)
+    X_aug = np.concatenate( (X1, reg1), axis=0)
+    y_aug = np.concatenate( (yy, np.zeros((D, 1))), axis = 0)
+
+    # lstsq
+    W, SSE, rank, singulars = np.linalg.lstsq(X_aug, y_aug, rcond=None)
+    W_lstsq = W[:-1]
+    b_lstsq = W[-1]
+    return W_lstsq, b_lstsq
+\end{lstlisting}
+
+We fit the model to the data using two different approaches:
+\begin{itemize}
+    \item our method (fit\_linreg) 
+    \item fit\_linreg\_gradopt, which is provided on the package ct\_support\_code
+\end{itemize}
+
+\begin{lstlisting}[language= Python]
+# least square method
+W_lstsq, b_lstsq = fit_linreg(X_train, y_train, 10)
+
+# gradient method
+alpha = 10
+W_grad, b_grad = fit_linreg_gradopt(X_train, np.squeeze(y_train), alpha)
+\end{lstlisting}
+
+We compute the Root Mean Square Errors in both cases:
+
+\begin{center}
+\begin{tabular}{ | c | c | c | } 
+\hline
+ & Training & Validation \\
+\hline
+Least Squares & 0.35575 & 0.42059 \\ 
+\hline
+Gradient & 0.35576 & 0.42061 \\ 
+\hline
+\end{tabular}
+\end{center}
+
+This is done with the following chunk of code:
+
+\begin{lstlisting}[language= Python]
+def compute_RMSE(X, y, w, b):
+    # expand_dims to all single dimensional arrays
+    if len(y.shape) == 1:
+        y = np.expand_dims(y, -1)
+
+    if len(w.shape) == 1:
+        w = np.expand_dims(w, -1)
+    
+    # compute RMSE
+    y_bar = np.dot(X, w) + b
+    square_erros = np.square(y_bar - y)
+    RMSE = np.sqrt(np.mean(square_erros))
+    return RMSE 
+
+RMSE_lstsq_tr = compute_RMSE(X_train, y_train, W_lstsq, b_lstsq)
+RMSE_lstsq_val = compute_RMSE(X_val, y_val, W_lstsq, b_lstsq)
+
+RMSE_grad_tr = compute_RMSE(X_train, y_train, W_grad, b_grad)
+RMSE_grad_val = compute_RMSE(X_val, y_val, W_grad, b_grad)
+\end{lstlisting}
+
+We observe that the Root Mean Square Errors are almost identical as expected. The gradient based optimization method cannot ensure that it will find the exact optimal, but because our cost function is convex it must converge to the optimal value.
+
+
+\section*{Question 3}
+
+\begin{center}
+\begin{tabular}{ | c | c | c | }
+\hline
+\multicolumn{3}{|c|}{ K = 10 } \\
+\hline
+ & Training & Validation \\
+\hline
+Least Squares & 0.76299 & 0.80863\\ 
+\hline
+Gradient & 0.76299 & 0.80862 \\ 
+\hline
+
+\hline 
+\hline
+
+\multicolumn{3}{|c|}{ K = 100 } \\
+\hline
+ & Training & Validation \\
+\hline
+Least Squares & 0.47499 & 0.50218 \\ 
+\hline
+Gradient & 0.47499 & 0.50135 \\ 
+\hline
+\end{tabular}
+\end{center}
 \end{document}
+
+
+Logical, we reduce the dimensionality of input space in a random way. Important information may be lost.
+
