@@ -1,9 +1,16 @@
-import numpy as np
 import os
 import copy
 import scipy.io as io
 import matplotlib.pyplot as plt
 from ct_support_code import *
+import copy
+import os
+
+import matplotlib.pyplot as plt
+import scipy.io as io
+
+from ct_support_code import *
+np.random.seed(1)
 plt.style.use('ggplot')
 plt.rc('text', usetex=True)
 plt.rc('font', family='serif')
@@ -24,17 +31,15 @@ N_train = X_train.shape[0]
 N_val = X_val.shape[0]
 N_test = X_test.shape[0]
 
-
 ############################### Question 1 ###################################
 # question 1a
-
 q1a1 = np.mean(y_train)
 q1a2 = np.mean(y_val)
 
 
 def mean_with_sterror(x):
     m = x.mean()
-    sigma = x.std(ddof = 1)
+    sigma = x.std(ddof=1)
     sterror = sigma / np.sqrt(x.shape[0])
     return m, sterror
 
@@ -114,8 +119,26 @@ def fit_linreg(X, yy, alpha):
     b_lstsq = W[-1]
     return W_lstsq, b_lstsq
 
+def fit_linreg1(X, yy, alpha):
+    # data augmentation
+    D = X.shape[1]
+    N = X.shape[0]
+
+    # reg = np.sqrt(alpha) * np.eye(D, D)
+    X_aug = np.concatenate( (X, np.ones((N, 1)) ), axis = 1)
+    # reg1 = np.concatenate( (reg, np.zeros((reg.shape[1], 1)) ), axis = 1)
+    # X_aug = np.concatenate( (X1, reg1), axis=0)
+    y_aug = yy # np.concatenate( (yy, np.zeros((D, 1))), axis = 0)
+
+    # lstsq
+    W, SSE, rank, singulars = np.linalg.lstsq(X_aug, y_aug, rcond=None)
+    W_lstsq = W[:-1]
+    b_lstsq = W[-1]
+    return W_lstsq, b_lstsq
+
 # least square method
-W_lstsq, b_lstsq = fit_linreg(X_train, y_train, 10)
+alpha = 10
+W_lstsq, b_lstsq = fit_linreg(X_train, y_train, alpha)
 
 # gradient method
 alpha = 10
@@ -135,6 +158,7 @@ def compute_RMSE(X, y, w, b):
     square_erros = np.square(y_bar - y)
     RMSE = np.sqrt(np.mean(square_erros))
     return RMSE
+
 
 q2_RMSE_lstsq_tr = compute_RMSE(X_train, y_train, W_lstsq, b_lstsq)
 q2_RMSE_lstsq_val = compute_RMSE(X_val, y_val, W_lstsq, b_lstsq)
@@ -159,7 +183,7 @@ def fit_and_measure_on_projection(K):
     results = {"K": K}
 
     # fitting
-    W_lstsq_proj, b_lstsq_proj = fit_linreg(X_train_proj, y_train, alpha)
+    W_lstsq_proj, b_lstsq_proj = fit_linreg1(X_train_proj, y_train, alpha)
     W_grad_proj, b_grad_proj = fit_linreg_gradopt(X_train_proj, np.squeeze(y_train), alpha)
 
     # RMSE
@@ -178,6 +202,9 @@ q3a_results_proj_10 = fit_and_measure_on_projection(K)
 
 K = 100
 q3a_results_proj_100 = fit_and_measure_on_projection(K)
+
+K = 373*3
+q3a_results_proj_373 = fit_and_measure_on_projection(K)
 
 
 # Question 3ii
@@ -235,7 +262,7 @@ for kk in range(K):
     labels = y_train > thresholds[kk]
 
     # fit logistic regression
-    ww, bb = fit_linreg_gradopt(X_train, np.squeeze(labels), alpha)
+    ww, bb = fit_logreg_gradopt(X_train, np.squeeze(labels), alpha)
     weight_dict[kk] = {}
     weight_dict[kk]['w'] = ww
     weight_dict[kk]['b'] = bb
@@ -257,6 +284,7 @@ X_test_smart = sigmoid(np.dot(X_test, ww) + bb)
 # X_train_smart_1 = np.dot(X_train, ww) + bb
 # X_val_smart_1 = np.dot(X_val, ww) + bb
 
+alpha = 10
 W_smart, b_smart = fit_linreg(X_train_smart, y_train, alpha)
 
 q4_RMSE_smart_tr = compute_RMSE(X_train_smart, y_train, W_smart, b_smart)
@@ -266,12 +294,12 @@ q4_RMSE_smart_test = compute_RMSE(X_test_smart, y_test, W_smart, b_smart)
 
 ############################ Question 5 ##################################
 # random init
-ww1, bb1, V1, bk1 = fit_cnn_gradopt(X_train, np.squeeze(y_train), 0)
+ww1, bb1, V1, bk1 = fit_cnn_gradopt(X_train, np.squeeze(y_train), 10)
 params1 = (ww1, bb1, V1, bk1)
 
 # sophisticated init
 init_params = (np.squeeze(W_smart), np.squeeze(b_smart), ww.T, np.squeeze(bb))
-ww2, bb2, V2, bk2 = fit_cnn_gradopt(X_train, np.squeeze(y_train), 0, init_params)
+ww2, bb2, V2, bk2 = fit_cnn_gradopt(X_train, np.squeeze(y_train), 10, init_params)
 params2 = (ww2, bb2, V2, bk2)
 
 def compute_RMSE_cnn(X, y, params):
@@ -280,10 +308,10 @@ def compute_RMSE_cnn(X, y, params):
     RMSE = np.sqrt(np.mean(square_error))
     return RMSE
 
-q5_RMSE_tr_rand_init = compute_RMSE_cnn(X_train, y_train, params1)
-q5_RMSE_val_rand_init = compute_RMSE_cnn(X_val, y_val, params1)
-q5_RMSE_test_rand_init = compute_RMSE_cnn(X_test, y_test, params1)
+q5_RMSE_rand_tr = compute_RMSE_cnn(X_train, y_train, params1)
+q5_RMSE_rand_val = compute_RMSE_cnn(X_val, y_val, params1)
+q5_RMSE_rand_test = compute_RMSE_cnn(X_test, y_test, params1)
 
-q5_RMSE_tr_soph_init = compute_RMSE_cnn(X_train, y_train, params2)
-q5_RMSE_val_soph_init = compute_RMSE_cnn(X_val, y_val, params2)
-q5_RMSE_test_soph_init = compute_RMSE_cnn(X_test, y_test, params2)
+q5_RMSE_soph_tr = compute_RMSE_cnn(X_train, y_train, params2)
+q5_RMSE_soph_val = compute_RMSE_cnn(X_val, y_val, params2)
+q5_RMSE_soph_test = compute_RMSE_cnn(X_test, y_test, params2)

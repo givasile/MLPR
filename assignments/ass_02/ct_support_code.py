@@ -6,6 +6,7 @@
 # You will need numpy and scipy:
 import numpy as np
 from scipy.optimize import minimize
+np.random.seed(1)
 
 def params_unwrap(param_vec, shapes, sizes):
     """Helper routine for minimize_list"""
