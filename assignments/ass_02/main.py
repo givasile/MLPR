@@ -124,25 +124,6 @@ def fit_linreg(X, yy, alpha):
     b_lstsq = W[-1]
     return W_lstsq, b_lstsq
 
-
-def fit_linreg1(X, yy, alpha):
-    # data augmentation
-    D = X.shape[1]
-    N = X.shape[0]
-
-    # reg = np.sqrt(alpha) * np.eye(D, D)
-    X_aug = np.concatenate((X, np.ones((N, 1))), axis=1)
-    # reg1 = np.concatenate( (reg, np.zeros((reg.shape[1], 1)) ), axis = 1)
-    # X_aug = np.concatenate( (X1, reg1), axis=0)
-    y_aug = yy  # np.concatenate( (yy, np.zeros((D, 1))), axis = 0)
-
-    # lstsq
-    W, SSE, rank, singulars = np.linalg.lstsq(X_aug, y_aug, rcond=None)
-    W_lstsq = W[:-1]
-    b_lstsq = W[-1]
-    return W_lstsq, b_lstsq
-
-
 # least square method
 alpha = 10
 W_lstsq, b_lstsq = fit_linreg(X_train, y_train, alpha)
@@ -331,13 +312,117 @@ q5_RMSE_soph_val = compute_RMSE_cnn(X_val, y_val, params2)
 q5_RMSE_soph_test = compute_RMSE_cnn(X_test, y_test, params2)
 
 # Question 6
+def aug_fn(X): return np.concatenate([X, X == 0, X < 0], axis=1)
+
+# fit each class to an augmented matrix
+K1 = 10  # number of thresholded classification problems to fit
+K2 = 50  # number of cnn hidden layer
+
+
+# mx = np.max(y_train)
+# mn = np.min(y_train)
+# hh = (mx - mn) / (K1 + 1)
+# thresholds = np.linspace(mn + hh, mx - hh, num=K1, endpoint=True)
+#
+# alpha = 10
+# weight_dict = {}
+# for kk in range(K1):
+#     labels = y_train > thresholds[kk]
+#
+#     # fit logistic regression
+#     ww, bb = fit_logreg_gradopt(aug_fn(X_train), np.squeeze(labels), alpha)
+#     weight_dict[kk] = {}
+#     weight_dict[kk]['w'] = ww
+#     weight_dict[kk]['b'] = bb
+#
+# # create X_smart_proj
+# weights = []
+# bias = []
+# for key, value in weight_dict.items():
+#     weights.append(value["w"])
+#     bias.append(value["b"])
+# ww = np.stack(weights, axis=1)
+# bb = np.expand_dims(np.stack(bias), 0)
+# def sigmoid(x): return 1 / (1 + np.exp(-x))
+#
+#
+# X_train_smart = sigmoid(np.dot(aug_fn(X_train), ww) + bb)
+# X_val_smart = sigmoid(np.dot(aug_fn(X_val), ww) + bb)
+# X_test_smart = sigmoid(np.dot(aug_fn(X_test), ww) + bb)
+
+# fit a cnn to the smart projections
 # random init
-K = 50
-init_params = (np.random.randn(K), np.array(0), np.random.randn(K, D), np.zeros(K))
-ww3, bb3, V3, bk3 = fit_cnn_gradopt(X_train, np.squeeze(y_train), 10, init_params)
-params3 = (ww3, bb3, V3, bk3)
+alpha = 10
+init_params = (np.random.randn(K2), np.array(0), np.random.randn(K2, 3*D), np.zeros(K2))
+ww1, bb1, V1, bk1 = fit_cnn_gradopt(aug_fn(X_train), np.squeeze(y_train), alpha, init_params)
+params1 = (ww1, bb1, V1, bk1)
 
 
-q6_RMSE_rand_tr = compute_RMSE_cnn(X_train, y_train, params3)
-q6_RMSE_rand_val = compute_RMSE_cnn(X_val, y_val, params3)
-q6_RMSE_rand_test = compute_RMSE_cnn(X_test, y_test, params3)
+def compute_RMSE_cnn(X, y, params):
+    y_bar = np.expand_dims(nn_cost(params, X), -1)
+    square_error = np.square(y_bar - y)
+    RMSE = np.sqrt(np.mean(square_error))
+    return RMSE
+
+q6_RMSE_smart_tr = compute_RMSE_cnn(aug_fn(X_train), y_train, params1)
+q6_RMSE_smart_val = compute_RMSE_cnn(aug_fn(X_val), y_val, params1)
+q6_RMSE_smart_test = compute_RMSE_cnn(aug_fn(X_test), y_test, params1)
+
+
+
+
+
+# # heuristic
+# def add_feature(X):
+#     pmf = X[:, :-1] - X[:,1:]
+#     pmf1 = copy.deepcopy(pmf)
+#
+#     pmf1[pmf1 > 0] = 0
+#     errorness = np.expand_dims(np.sum(pmf1, axis=1), -1)
+#
+#     return np.concatenate((X, errorness), axis=1)
+#
+#
+# def get_errorness(X):
+#     pmf = X[:, :-1] - X[:,1:]
+#     pmf1 = copy.deepcopy(pmf)
+#
+#     pmf1[pmf1 > 0] = 0
+#     errorness = np.expand_dims(np.sum(pmf1, axis=1), -1)
+#
+#     return errorness
+#
+# error_tr = get_errorness(X_train_smart)
+# error_val = get_errorness(X_val_smart)
+# error_test = get_errorness(X_test_smart)
+#
+# tmp = np.repeat(error_tr, K1, axis = 1)
+# X_train_smart[]
+
+# K2 = 100
+# init_params = (np.random.randn(K2), np.array(0), np.random.randn(K2, K1+1), np.zeros(K2))
+# ww1, bb1, V1, bk1 = fit_cnn_gradopt(add_feature(X_train_smart), np.squeeze(y_train), 10, init_params)
+# params1 = (ww1, bb1, V1, bk1)
+#
+#
+# q6_RMSE_smart_tr1 = compute_RMSE_cnn(add_feature(X_train_smart), y_train, params1)
+# q6_RMSE_smart_val1 = compute_RMSE_cnn(add_feature(X_val_smart), y_val, params1)
+# q6_RMSE_smart_test1 = compute_RMSE_cnn(add_feature(X_test_smart), y_test, params1)
+
+# def RMSE(X, y, w, b):
+#     # expand_dims to all single dimensional arrays
+#     if len(y.shape) == 1:
+#         y = np.expand_dims(y, -1)
+#
+#     if len(w.shape) == 1:
+#         w = np.expand_dims(w, -1)
+#
+#     # compute RMSE
+#     y_bar = np.dot(X, w) + b
+#     square_erros = np.square(y_bar - y)
+#     RMSE = np.sqrt(np.mean(square_erros))
+#     return RMSE, square_erros, y_bar
+#
+# err_tr, vec_tr, pred_tr = RMSE(X_train_smart, y_train, W_smart, b_smart)
+# err_val, vec_val , pred_val= RMSE(X_val_smart, y_val, W_smart, b_smart)
+# err_te, vec_te, pred_te = RMSE(X_test_smart, y_test, W_smart, b_smart)
