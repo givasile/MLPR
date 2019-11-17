@@ -337,8 +337,8 @@ def fit_and_RMSE_cnn(s, k, add_binaries, inputs):
     results['RMSE_test'] = compute_RMSE_cnn(X_test, y_test, params1)
     return results, params1
 
-sig = [0.1] # , 0.3, 0.5, 0.7, 0.9]
-K = [5, 10] #, 20, 40]
+sig = [0.3, 0.4, 0.45, 0.5, 0.55, 0.6]
+K = [10, 20, 40, 60]
 add_binaries = [True, False]
 
 inputs = {'X_train': X_train,
@@ -348,16 +348,23 @@ inputs = {'X_train': X_train,
           'y_val': y_val,
           'y_test': y_test}
 
-
 results = []
 params = []
+hyperparams = []
 for ii, s in enumerate(sig):
     results.append([])
     params.append([])
+    hyperparams.append([])
     for jj, k in enumerate(K):
         results[ii].append([])
         params[ii].append([])
+        hyperparams[ii].append([])
         for kk, bin in enumerate(add_binaries):
-            tmp = fit_and_RMSE_cnn(s,k,bin,inputs)
-            results[ii][jj].append(tmp[0])
-            params[ii][jj].append(tmp[1])
+            results[ii][jj].append([])
+            params[ii][jj].append([])
+            hyperparams[ii][jj].append([])
+            for n in range(5):
+                tmp = fit_and_RMSE_cnn(s,k,bin,inputs)
+                results[ii][jj][kk].append(tmp[0])
+                params[ii][jj][kk].append(tmp[1])
+                hyperparams[ii][jj][kk].append({'s':s, 'k':k, 'add_binaries':bin, 'n':n})
