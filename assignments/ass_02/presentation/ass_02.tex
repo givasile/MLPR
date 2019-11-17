@@ -43,7 +43,7 @@
 
 \section*{Question 1}
 
-We load the data and store it in appropriate numpy arrays:
+We load the data and store it in appropriate numpy arrays. We don't pass the parameter \textit{squeeze\_me=True}, because we prefer out matrices to have full shape.
 
 \begin{lstlisting}[language = Python]
 _filepath = os.path.abspath('./../../../data/ass_02/ct_data.mat')
@@ -60,7 +60,7 @@ y_test = _data['y_test']
 
 \subsection*{Question 1a}
 
-We verify that the mean of $y\_train$ is zero (up to numerical rounding errors) while the mean of $y\_val$ is not zero.
+We verify that, up to numerical rounding errors, the mean of the $y\_train$ vector is zero, while this is not the case for the $y\_val$.
 
 \begin{lstlisting}[language = Python]
 np.mean(y_train) # -9.13868774539957e-15
@@ -68,22 +68,13 @@ np.mean(y_val)   # -0.2160085093241599
 \end{lstlisting}
 
 
-We estimate the mean $\tilde{\mu}$ and the standard error $s$ of vector $y$ with the following types:
+For an array $y$ we compute its mean $\tilde{\mu}$ and standard error $s$ with the following forms:
 
-$$ \displaystyle \tilde{\mu} = \frac{1}{N} \sum_{i=1}^{N} y^{(i)} \approx \mu $$
+$$ \displaystyle \tilde{\mu} = \frac{1}{N} \sum_{i=1}^{N} y^{(i)} $$
 
-The standard error $s$ of the estimation $\tilde{\mu}$ is:
+$$ s = \sqrt{\frac{1}{N(N-1)} \sum_{i=1}^{N} (y^{(i)} - \tilde{\mu})^2} $$
 
-$$ s = \sqrt{VAR(\tilde{\mu})} = 
-\displaystyle \frac{\sigma}{\sqrt{N}} 
-\approx \displaystyle \frac{\tilde{\sigma}}{\sqrt{N}}$$ 
-
-where,
-
-$$ \displaystyle \tilde{\sigma}^2 = \frac{1}{N-1} \sum_{i=1}^{N} (y^{(i)} - \tilde{\mu})^2 $$
-
-
-We compute the mean with standard error of the $y\_val$ vector and of the first $N = 5785$ elements of $y\_train$ vector with the following code:
+We create a small function for implementing the above computations:
 
 \begin{lstlisting}[language = Python]
 def mean_with_sterror(x):
@@ -91,30 +82,56 @@ def mean_with_sterror(x):
     sigma = x.std(ddof = 1)
     sterror = sigma / np.sqrt(x.shape[0])
     return m, sterror
+\end{lstlisting}
 
+
+% The standard error $s$ of the estimation $\tilde{\mu}$ is:
+
+% $$ s = \sqrt{VAR(\tilde{\mu})} = 
+% \displaystyle \frac{\sigma}{\sqrt{N}} 
+% \approx \displaystyle \frac{\tilde{\sigma}}{\sqrt{N}}$$ 
+
+% where,
+
+% $$ \displaystyle \tilde{\sigma}^2 = \frac{1}{N-1} \sum_{i=1}^{N} (y^{(i)} - \tilde{\mu})^2 $$
+
+
+% We compute the mean with standard error of the $y\_val$ vector and of the first $N = 5785$ elements of $y\_train$ vector with the following code:
+
+% \begin{lstlisting}[language = Python]
+% def mean_with_sterror(x):
+%     m = x.mean()
+%     sigma = x.std(ddof = 1)
+%     sterror = sigma / np.sqrt(x.shape[0])
+%     return m, sterror
+
+% m, err = mean_with_sterror(y_val)
+% # m = -0.2160085093241599, err = 0.01290449880016868
+% N = 5785
+% m, err = mean_with_sterror(y_train[:N])
+% # m = 0.01290449880016868, err = 0.011927303389170828
+% \end{lstlisting}
+
+And we apply it on $y\_val$ and the first $5785$ elements of $y\_train$:
+
+\begin{lstlisting}[language=Python]
 m, err = mean_with_sterror(y_val)
 # m = -0.2160085093241599, err = 0.01290449880016868
 N = 5785
 m, err = mean_with_sterror(y_train[:N])
-# m = 0.01290449880016868, err = 0.011927303389170828
+# m = -0.44247687859693674, err = 0.011927303389170828
 \end{lstlisting}
 
-For the validation set:
-\begin{itemize}
-    \item $ \tilde{\sigma}_{val}^2 = 0.982 $
-    \item $ \tilde{\mu_{val}} = - 0.216 \pm 0.013 $
-\end{itemize}
 
-For the first $5785$ samples of the training set:
+We summarize the results:
 \begin{itemize}
-    \item $ \tilde{\sigma}_{tr}^2 = -0.442 $
-    \item $ \tilde{\mu_{tr}} = - 0.442 \pm 0.012 $
+    \item $E[y_{val}] \approx - 0.216 \pm 0.013$
+    \item $E[y_{test}] \approx - 0.442 \pm 0.012$ (from the first $5785$ elements)
 \end{itemize}
-
 
 \subsubsection*{Explanation of the misleading results}
 
-As is easily observed, the estimated mean based in the first $5785$ examples of the training set is misleading. This happens because the values are not randomly distributed inside the array.
+As easily observed, the estimated mean based in the first $5785$ examples of the training set is misleading. This happens because the values are not randomly distributed inside the array.
 
 We hold a simple experiment to show that if we randomly pick a subset of the training set, the results are as expected. We randomly sample $N = 500$ (much less than $5785$) examples from the training set and we compute their mean $\mu^{(i)}$ and standard error $s^{(i)}$. We repeat this random process $1000$ times. Finally, we compute the mean and standard deviation of the means and standard errors. 
 
@@ -149,7 +166,7 @@ print("Mean estimation of y_train from %d iid samples, in 1000 different executi
 print("Standard error estimation of y_train from %d iid samples, in 1000 different executions has mean: %.3f and standard deviation: %.3f" %(N, np.mean(list_stderr), np.std(list_stderr, ddof = 1)))
 \end{lstlisting}
 
-\subsubsection*{Question 1b}
+\subsection*{Question 1b}
 
 We use python, so our indices are zero-based. 
 The code for identifying constant features:
@@ -175,9 +192,7 @@ ind_duplicate_features = np.sort(np.unique(ind_duplicate_features))
 # array([ 69,  78,  79, 179, 188, 189, 199, 287, 351, 359])
 \end{lstlisting}
 
-Duplicates columns are: $ 69,  78,  79, 179, 188, 189, 199, 287, 351, 359 $
-
-We exclude constant and duplicate columns.
+Duplicates \textbf{later} columns are: $ {69,  78,  79, 179, 188, 189, 199, 287, 351, 359} $
 
 
 \section*{Question 2}
@@ -227,21 +242,7 @@ alpha = 10
 W_grad, b_grad = fit_linreg_gradopt(X_train, np.squeeze(y_train), alpha)
 \end{lstlisting}
 
-We compute the Root Mean Square Errors in both cases:
-
-\begin{center}
-\begin{tabular}{ | c | c | c | } 
-\hline
- & Training & Validation \\
-\hline
-Least Squares & 0.35575 & 0.42059 \\ 
-\hline
-Gradient & 0.35576 & 0.42061 \\ 
-\hline
-\end{tabular}
-\end{center}
-
-This is done with the following chunk of code:
+We compute the RMSE in both cases with the following code:
 
 \begin{lstlisting}[language= Python]
 def compute_RMSE(X, y, w, b):
@@ -265,14 +266,28 @@ RMSE_grad_tr = compute_RMSE(X_train, y_train, W_grad, b_grad)
 RMSE_grad_val = compute_RMSE(X_val, y_val, W_grad, b_grad)
 \end{lstlisting}
 
-We observe that the Root Mean Square Errors are almost identical as expected. The gradient based optimization method cannot ensure that it will find the exact optimal, but because our cost function is convex it must converge to the optimal value.
+We report the RMSE in both cases:
+
+\begin{center}
+\begin{tabular}{ | c | c | c | } 
+\hline
+ & Training & Validation \\
+\hline
+Least Squares & 0.35575 & 0.42059 \\ 
+\hline
+Gradient & 0.35576 & 0.42061 \\ 
+\hline
+\end{tabular}
+\end{center}
+
+We observe that the two RMSE are very close, but not identical. The gradient based optimization method cannot ensure that it will find the exact optimal, but because our cost function is convex it must converge to the optimal value. So the results are as expected.
 
 
 \section*{Question 3}
 
 \subsection*{Question 3a}
 
-With the following routine we project the data with a random projection matrix, we fit them using fitlinreg and we measure the RMSE:
+We use the the provided \textit{random\_proj} routine to create the projection matrix. We create the following function for projecting the input, fitting the projected data and computing the RMSE:
 
 \begin{lstlisting}[language=Python]
 def fit_and_measure_on_projection(K):
@@ -326,7 +341,7 @@ Least Squares & 0.47499 & 0.50218 \\
 \end{center}
 
 
-As we reduce the dimensionality, the new training error must be larger or equal than before. Since our input matrix $X\_train$ is full rank as we checked, every feature gives information, so reducing the dimensionality leads to strictly higher error.
+As we reduce the dimensionality, the new training error must be larger or equal than before. Since our input matrix $X\_train$ is full rank (as we checked), every feature gives information, so reducing the dimensionality leads to strictly higher error.
 
 
 \subsection*{Question 3b}
@@ -336,7 +351,7 @@ It is clear that a very big fraction of feature 46 is either $0$ or $-0.25$. Mor
 \includegraphics[scale=0.75]{fig_01.pdf}
 
 
-Afterwards, we add binaries:
+We create a function for fitting the augmented data and measuring the RMSE:
 
 \begin{lstlisting}[language=Python]
 def fit_and_measure_added_binaries():
@@ -361,7 +376,7 @@ def fit_and_measure_added_binaries():
 q3b_results_added_binaries = fit_and_measure_added_binaries()
 \end{lstlisting}
 
-Results:
+We report the results:
 
 \begin{center}
 \begin{tabular}{ | c | c | c | }
@@ -373,13 +388,14 @@ RMSE & 0.31783 & 0.37698 \\
 \end{tabular}
 \end{center}
 
-The training error has gone down. This is expected, as the augmented X matrix:
+The training error has improved. This is expected, as the augmented X matrix:
 \begin{itemize}
     \item contains the initial $X\_train$ as a part of it
     \item has more features than $X\_train$
     \item has higher rank than $X\_train$ $(=831)$
     
 \end{itemize}
+We also notice that the validation error has been improved as well. This is a much stronger indicator that this type of augmentation, is beneficial in terms of accuracy.
 
 
 \section*{Question 4}
@@ -437,7 +453,7 @@ X_val_smart = sigmoid(np.dot(X_val, ww) + bb)
 X_test_smart = sigmoid(np.dot(X_test, ww) + bb)
 \end{lstlisting}
 
-Finally, we fit the projected inputs to a linear regression model and compute the appropriate :
+Finally, we fit the projected inputs to a linear regression model and compute the appropriate RMSE:
 
 \begin{lstlisting}[language=Python]
 # fit linear regression
@@ -461,17 +477,19 @@ RMSE & 0.13825 & 0.25213 \\
 \end{tabular}
 \end{center}
 
-When we project to a much smaller number of dimensions, it is crucial to define a projection matrix in a sophisticated manner. This means that we would like our projection to maintain as much information as possible. In the second approach we defined a set of reasonable binary classification tasks and we learned the optimal parameters for them. This transformation maintained more information than the random projection.  
+We observe a massive improvement in the training and validation error. Adding a non-linear projection unit before the final linear regression, has made our predictions more accurate. (Even more than the linear regression models operating in the augmented X matrix). By fitting the 10 logistic regression models, we managed to create a learned non-linear projection mechanism, that maintains more information that the random projection matrix.
 
 \section*{Question 5}
 
 We fit two Neural Networks with the exact same architecture and different initializations.
 
 \begin{lstlisting}[language=Python]
+# random initialization
+init_params = (np.random.randn(10), np.array(0), np.random.randn(10, D), np.zeros(10))
 ww1, bb1, V1, bk1 = fit_cnn_gradopt(X_train, np.squeeze(y_train), 10)
 params1 = (ww1, bb1, V1, bk1)
 
-# sophisticated init
+# sophisticated initialization
 init_params = (np.squeeze(W_smart), np.squeeze(b_smart), ww.T, np.squeeze(bb))
 ww2, bb2, V2, bk2 = fit_cnn_gradopt(X_train, np.squeeze(y_train), 10, init_params)
 params2 = (ww2, bb2, V2, bk2)
@@ -505,44 +523,10 @@ Sophisticated Init & 0.10435 & 0.25692 \\
 \end{tabular}
 \end{center}
 
-In the random initialization, we randomly initialized the weights with random seed $=1$.
-As we can see, both methods produce almost the same results.
-Finally, we observe that the RMSE of the validation set of the model in question 4, is approximately the same with the RMSE of the validation set of the neural network. Hence, neural network could not learn anything more than the previous model. 
+In the random initialization, we initialize the weights of the matrices from a normal distribution and the biases with zero.
+As we can see, both methods produce almost the same results. This means that the number of learnable parameters of the cnn is relatively small for the dimensionality of the problem and and the amount of training data is large enough. Thus, a good local optima can easily be reached from a random initial point.
 
-
-We changed a small part of the supported coded, in order to be able to train the model either with randomly or with manually initilized parameters
-\begin{lstlisting}[language=Python]
- def fit_cnn_gradopt(X, yy, alpha, params = None):
-    """
-    fit a regularized logistic regression model with gradient opt
-
-         ww, bb = fit_linreg_gradopt(X, yy, alpha)
-
-     Find weights and bias by using a gradient-based optimizer
-     (minimize_list) to improve the regularized least squares cost:
-
-       np.sum(((np.dot(X,ww) + bb) - yy)**2) + alpha*np.dot(ww,ww)
-
-     Inputs:
-             X N,D design matrix of input features
-            yy N,  real-valued targets
-         alpha     scalar regularization constant
-
-     Outputs:
-            ww D,  fitted weights
-            bb     scalar fitted bias
-    """
-    D = X.shape[1]
-    args = (X, yy, alpha)
-    if params is None:
-        init = (np.random.randn(10), np.array(0), np.random.randn(10, D), np.zeros(10))
-    else:
-        init = params
-
-
-    ww1, bb1, ww2, bb2 = minimize_list(nn_cost, init, args)
-    return ww1, bb1, ww2, bb2
-\end{lstlisting}
+We also observe that the RMSE of the validation set of the model in question 4, is approximately the same with the RMSE of the neural network. Hence, neural network could not learn anything more than the previous model. 
 
 \section*{Question 6}
 \end{document}
