@@ -44,14 +44,9 @@ def mean_with_sterror(x):
     sterror = sigma / np.sqrt(x.shape[0])
     return m, sterror
 
-
 q1a3_m, q1a3_err = mean_with_sterror(y_val)
-print("Mean estimation of y_val is : %.3f with standard error: %.3f" % (q1a3_m, q1a3_err))
-
 N = 5785
 q1a4_m, q1a4_err = mean_with_sterror(y_train[:N])
-print("Mean estimation of first %d values of y_train is : %.3f with standard error: %.3f" % (N, q1a4_m, q1a4_err))
-
 
 def small_experiment():
     list_m = []
@@ -64,45 +59,43 @@ def small_experiment():
         m, err = mean_with_sterror(y_train_tmp[:N])
         list_m.append(m)
         list_stderr.append(err)
-
     print("Mean estimation of y_train from %d iid samples, in 1000 different executions has mean: %.3f and standard deviation: %.3f" % (
         N, np.mean(list_m), np.std(list_m, ddof=1)))
-
     print(
         "Standard error estimation of y_train from %d iid samples, in 1000 different executions has mean: %.3f and standard deviation: %.3f" % (
         N, np.mean(list_stderr), np.std(list_stderr, ddof=1)))
 
 
 # question 1b
-threshold = 10e-10
+_threshold = 10e-10
 
 # find indices of constant features
-ind_const_features = np.where(X_train.var(0) <= threshold)[0]
+q1b_ind_const_features = np.where(X_train.var(0) <= _threshold)[0]
 
 # find_indices of duplicate features
-duplicates = []
+_duplicates = []
 for j in range(X_train.shape[1]):
     f1 = X_train[:, j]
     tmp = X_train[:, j + 1:] - np.expand_dims(f1, -1)
-    indices = np.where((np.var(tmp, 0) <= threshold))[0] + j + 1
-    duplicates.append(indices)
+    indices = np.where((np.var(tmp, 0) <= _threshold))[0] + j + 1
+    _duplicates.append(indices)
 
-duplicates_dict = {}
-for i, val in enumerate(duplicates):
+q1b_duplicates_dict = {}
+for i, val in enumerate(_duplicates):
     if len(val) > 0:
-        duplicates_dict[i] = val
+        q1b_duplicates_dict[i] = val
 
-ind_duplicate_features = np.concatenate(duplicates).ravel()
-ind_duplicate_features = np.sort(np.unique(ind_duplicate_features))
+q1b_ind_duplicate_features = np.concatenate(_duplicates).ravel()
+q1b_ind_duplicate_features = np.sort(np.unique(q1b_ind_duplicate_features))
 
 # merge indices
-ind_excluded_features = np.concatenate((ind_const_features, ind_duplicate_features)).ravel()
-ind_excluded_features = np.sort(np.unique(ind_excluded_features))
+q1b_ind_excluded_features = np.concatenate((q1b_ind_const_features, q1b_ind_duplicate_features)).ravel()
+q1b_ind_excluded_features = np.sort(np.unique(q1b_ind_excluded_features))
 
 # redefine train, val, test sets
-X_train = np.delete(X_train, ind_excluded_features, axis=1)
-X_val = np.delete(X_val, ind_excluded_features, axis=1)
-X_test = np.delete(X_test, ind_excluded_features, axis=1)
+X_train = np.delete(X_train, q1b_ind_excluded_features, axis=1)
+X_val = np.delete(X_val, q1b_ind_excluded_features, axis=1)
+X_test = np.delete(X_test, q1b_ind_excluded_features, axis=1)
 D = X_train.shape[1]
 
 
@@ -172,7 +165,7 @@ def fit_and_measure_on_projection(K):
     results = {"K": K}
 
     # fitting
-    W_lstsq_proj, b_lstsq_proj = fit_linreg1(X_train_proj, y_train, alpha)
+    W_lstsq_proj, b_lstsq_proj = fit_linreg(X_train_proj, y_train, alpha)
     W_grad_proj, b_grad_proj = fit_linreg_gradopt(X_train_proj, np.squeeze(y_train), alpha)
 
     # RMSE
@@ -286,6 +279,7 @@ q4_RMSE_smart_test = compute_RMSE(X_test_smart, y_test, W_smart, b_smart)
 
 ############################ Question 5 ##################################
 # random init
+np.random.seed(1)
 init_params = (np.random.randn(10), np.array(0), np.random.randn(10, D), np.zeros(10))
 ww1, bb1, V1, bk1 = fit_cnn_gradopt(X_train, np.squeeze(y_train), 10, init_params)
 params1 = (ww1, bb1, V1, bk1)
@@ -312,117 +306,58 @@ q5_RMSE_soph_val = compute_RMSE_cnn(X_val, y_val, params2)
 q5_RMSE_soph_test = compute_RMSE_cnn(X_test, y_test, params2)
 
 # Question 6
-def aug_fn(X): return np.concatenate([X, X == 0, X < 0], axis=1)
+def fit_and_RMSE_cnn(s, k, add_binaries, inputs):
+    def aug_fn(X): return np.concatenate([X, X == 0, X < 0], axis=1)
 
-# fit each class to an augmented matrix
-K1 = 10  # number of thresholded classification problems to fit
-K2 = 50  # number of cnn hidden layer
+    X_train = inputs['X_train']
+    X_val = inputs['X_val']
+    X_test = inputs['X_test']
+    y_train = inputs['y_train']
+    y_val = inputs['y_val']
+    y_test = inputs['y_test']
+    D = X_train.shape[1]
 
+    # random init
+    alpha = 10
+    if add_binaries:
+        X_train = aug_fn(X_train)
+        X_val = aug_fn(X_val)
+        X_test = aug_fn(X_test)
+        D = 3*D
 
-# mx = np.max(y_train)
-# mn = np.min(y_train)
-# hh = (mx - mn) / (K1 + 1)
-# thresholds = np.linspace(mn + hh, mx - hh, num=K1, endpoint=True)
-#
-# alpha = 10
-# weight_dict = {}
-# for kk in range(K1):
-#     labels = y_train > thresholds[kk]
-#
-#     # fit logistic regression
-#     ww, bb = fit_logreg_gradopt(aug_fn(X_train), np.squeeze(labels), alpha)
-#     weight_dict[kk] = {}
-#     weight_dict[kk]['w'] = ww
-#     weight_dict[kk]['b'] = bb
-#
-# # create X_smart_proj
-# weights = []
-# bias = []
-# for key, value in weight_dict.items():
-#     weights.append(value["w"])
-#     bias.append(value["b"])
-# ww = np.stack(weights, axis=1)
-# bb = np.expand_dims(np.stack(bias), 0)
-# def sigmoid(x): return 1 / (1 + np.exp(-x))
-#
-#
-# X_train_smart = sigmoid(np.dot(aug_fn(X_train), ww) + bb)
-# X_val_smart = sigmoid(np.dot(aug_fn(X_val), ww) + bb)
-# X_test_smart = sigmoid(np.dot(aug_fn(X_test), ww) + bb)
+    init_params = (np.random.randn(k), np.array(0), np.random.randn(k, D), np.zeros(k))
+    ww1, bb1, V1, bk1 = fit_cnn_gradopt(X_train + np.random.standard_normal(X_train.shape) * s,
+                                        np.squeeze(y_train), alpha, init_params)
 
-# fit a cnn to the smart projections
-# random init
-alpha = 10
-init_params = (np.random.randn(K2), np.array(0), np.random.randn(K2, 3*D), np.zeros(K2))
-ww1, bb1, V1, bk1 = fit_cnn_gradopt(aug_fn(X_train), np.squeeze(y_train), alpha, init_params)
-params1 = (ww1, bb1, V1, bk1)
+    params1 = (ww1, bb1, V1, bk1)
+
+    results = {}
+    results['RMSE_tr'] = compute_RMSE_cnn(X_train, y_train, params1)
+    results['RMSE_val'] = compute_RMSE_cnn(X_val, y_val, params1)
+    results['RMSE_test'] = compute_RMSE_cnn(X_test, y_test, params1)
+    return results, params1
+
+sig = [0.1] # , 0.3, 0.5, 0.7, 0.9]
+K = [5, 10] #, 20, 40]
+add_binaries = [True, False]
+
+inputs = {'X_train': X_train,
+          'X_val': X_val,
+          'X_test': X_test,
+          'y_train': y_train,
+          'y_val': y_val,
+          'y_test': y_test}
 
 
-def compute_RMSE_cnn(X, y, params):
-    y_bar = np.expand_dims(nn_cost(params, X), -1)
-    square_error = np.square(y_bar - y)
-    RMSE = np.sqrt(np.mean(square_error))
-    return RMSE
-
-q6_RMSE_smart_tr = compute_RMSE_cnn(aug_fn(X_train), y_train, params1)
-q6_RMSE_smart_val = compute_RMSE_cnn(aug_fn(X_val), y_val, params1)
-q6_RMSE_smart_test = compute_RMSE_cnn(aug_fn(X_test), y_test, params1)
-
-
-
-
-
-# # heuristic
-# def add_feature(X):
-#     pmf = X[:, :-1] - X[:,1:]
-#     pmf1 = copy.deepcopy(pmf)
-#
-#     pmf1[pmf1 > 0] = 0
-#     errorness = np.expand_dims(np.sum(pmf1, axis=1), -1)
-#
-#     return np.concatenate((X, errorness), axis=1)
-#
-#
-# def get_errorness(X):
-#     pmf = X[:, :-1] - X[:,1:]
-#     pmf1 = copy.deepcopy(pmf)
-#
-#     pmf1[pmf1 > 0] = 0
-#     errorness = np.expand_dims(np.sum(pmf1, axis=1), -1)
-#
-#     return errorness
-#
-# error_tr = get_errorness(X_train_smart)
-# error_val = get_errorness(X_val_smart)
-# error_test = get_errorness(X_test_smart)
-#
-# tmp = np.repeat(error_tr, K1, axis = 1)
-# X_train_smart[]
-
-# K2 = 100
-# init_params = (np.random.randn(K2), np.array(0), np.random.randn(K2, K1+1), np.zeros(K2))
-# ww1, bb1, V1, bk1 = fit_cnn_gradopt(add_feature(X_train_smart), np.squeeze(y_train), 10, init_params)
-# params1 = (ww1, bb1, V1, bk1)
-#
-#
-# q6_RMSE_smart_tr1 = compute_RMSE_cnn(add_feature(X_train_smart), y_train, params1)
-# q6_RMSE_smart_val1 = compute_RMSE_cnn(add_feature(X_val_smart), y_val, params1)
-# q6_RMSE_smart_test1 = compute_RMSE_cnn(add_feature(X_test_smart), y_test, params1)
-
-# def RMSE(X, y, w, b):
-#     # expand_dims to all single dimensional arrays
-#     if len(y.shape) == 1:
-#         y = np.expand_dims(y, -1)
-#
-#     if len(w.shape) == 1:
-#         w = np.expand_dims(w, -1)
-#
-#     # compute RMSE
-#     y_bar = np.dot(X, w) + b
-#     square_erros = np.square(y_bar - y)
-#     RMSE = np.sqrt(np.mean(square_erros))
-#     return RMSE, square_erros, y_bar
-#
-# err_tr, vec_tr, pred_tr = RMSE(X_train_smart, y_train, W_smart, b_smart)
-# err_val, vec_val , pred_val= RMSE(X_val_smart, y_val, W_smart, b_smart)
-# err_te, vec_te, pred_te = RMSE(X_test_smart, y_test, W_smart, b_smart)
+results = []
+params = []
+for ii, s in enumerate(sig):
+    results.append([])
+    params.append([])
+    for jj, k in enumerate(K):
+        results[ii].append([])
+        params[ii].append([])
+        for kk, bin in enumerate(add_binaries):
+            tmp = fit_and_RMSE_cnn(s,k,bin,inputs)
+            results[ii][jj].append(tmp[0])
+            params[ii][jj].append(tmp[1])

@@ -8,6 +8,7 @@ import numpy as np
 from scipy.optimize import minimize
 np.random.seed(1)
 
+
 def params_unwrap(param_vec, shapes, sizes):
     """Helper routine for minimize_list"""
     args = []
@@ -17,6 +18,7 @@ def params_unwrap(param_vec, shapes, sizes):
         args.append(param_vec[pos:pos+sz].reshape(shapes[i]))
         pos += sz
     return args
+
 
 def params_wrap(param_list):
     """Helper routine for minimize_list"""
@@ -88,6 +90,7 @@ def linreg_cost(params, X, yy, alpha):
 
     return E, [ww_bar, bb_bar]
 
+
 def fit_linreg_gradopt(X, yy, alpha):
     """
     fit a regularized linear regression model with gradient opt
@@ -115,86 +118,6 @@ def fit_linreg_gradopt(X, yy, alpha):
     return ww, bb
 
 
-def fit_logreg_gradopt(X, yy, alpha):
-    """
-    fit a regularized logistic regression model with gradient opt
-
-         ww, bb = fit_linreg_gradopt(X, yy, alpha)
-
-     Find weights and bias by using a gradient-based optimizer
-     (minimize_list) to improve the regularized least squares cost:
-
-       np.sum(((np.dot(X,ww) + bb) - yy)**2) + alpha*np.dot(ww,ww)
-
-     Inputs:
-             X N,D design matrix of input features
-            yy N,  real-valued targets
-         alpha     scalar regularization constant
-
-     Outputs:
-            ww D,  fitted weights
-            bb     scalar fitted bias
-    """
-    D = X.shape[1]
-    args = (X, yy, alpha)
-    init = (np.zeros(D), np.array(0))
-    ww, bb = minimize_list(logreg_cost, init, args)
-    return ww, bb
-
-
-def fit_cnn_gradopt(X, yy, alpha, params=None):
-    # TODO documentation
-    """
-    fit a regularized logistic regression model with gradient opt
-
-         ww, bb = fit_linreg_gradopt(X, yy, alpha)
-
-     Find weights and bias by using a gradient-based optimizer
-     (minimize_list) to improve the regularized least squares cost:
-
-       np.sum(((np.dot(X,ww) + bb) - yy)**2) + alpha*np.dot(ww,ww)
-
-     Inputs:
-             X N,D design matrix of input features
-            yy N,  real-valued targets
-         alpha     scalar regularization constant
-
-     Outputs:
-            ww D,  fitted weights
-            bb     scalar fitted bias
-    """
-    args = (X, yy, alpha)
-    init = params
-
-    ww1, bb1, ww2, bb2 = minimize_list(nn_cost, init, args)
-    return ww1, bb1, ww2, bb2
-
-
-def random_proj(D, K=None, seed=0):
-    """return random projection matrix
-
-    Inputs:
-        D     number of input features
-        K     how many columns to return in projection matrix
-     seed     random number generator seed (default 0)
-
-    Outputs:
-        R D,K matrix to apply to design matrix or other matrices shifted
-              in same way.
-    """
-    if K is None:
-        K = D
-
-    # Generate random numbers
-    rng = np.random.RandomState(seed)
-    R = rng.normal(size=(D, K))
-
-    # Normalise rows
-    R /= np.linalg.norm(R, axis=1, keepdims=True)
-
-    return R
-
-
 def logreg_cost(params, X, yy, alpha):
     """Regularized logistic regression cost function and gradients
 
@@ -213,7 +136,7 @@ def logreg_cost(params, X, yy, alpha):
     ww, bb = params
 
     # Force targets to be +/- 1
-    yy = 2*(yy==1) - 1
+    yy = 2*(yy == 1) - 1
 
     # forward computation of error
     aa = yy*(np.dot(X, ww) + bb)
@@ -226,6 +149,33 @@ def logreg_cost(params, X, yy, alpha):
     ww_bar = np.dot(X.T, yy*aa_bar) + 2*alpha*ww
 
     return E, (ww_bar, bb_bar)
+
+
+def fit_logreg_gradopt(X, yy, alpha):
+    """
+    fit a regularized logistic regression model with gradient opt
+
+         ww, bb = fit_logreg_gradopt(X, yy, alpha)
+
+     Find weights and bias by using a gradient-based optimizer
+     (minimize_list) to improve the regularized least squares cost:
+
+       np.sum(((sigmoid(np.dot(X,ww) + bb)) - yy)**2) + alpha*np.dot(ww,ww)
+
+     Inputs:
+             X N,D design matrix of input features
+            yy N,  real-valued targets
+         alpha     scalar regularization constant
+
+     Outputs:
+            ww D,  fitted weights
+            bb     scalar fitted bias
+    """
+    D = X.shape[1]
+    args = (X, yy, alpha)
+    init = (np.zeros(D), np.array(0))
+    ww, bb = minimize_list(logreg_cost, init, args)
+    return ww, bb
 
 
 def nn_cost(params, X, yy=None, alpha=None):
@@ -277,3 +227,62 @@ def nn_cost(params, X, yy=None, alpha=None):
     bk_bar = np.sum(A_bar, 0)
 
     return E, (ww_bar, bb_bar, V_bar, bk_bar)
+
+
+def fit_cnn_gradopt(X, yy, alpha, params=None):
+    """
+    fit a cnn model with gradient opt
+
+         ww1, bb1, ww2, bb2 = fit_litcnn_gradopt(X, yy, alpha, parasm)
+
+     Find weights and bias by using a gradient-based optimizer
+     (minimize_list) to improve the regularized least squares cost:
+
+       np.sum((cnn_cost(X) - yy)**2) + alpha*np.dot(ww,ww)
+
+     Inputs:
+             X N,D design matrix of input features
+            yy N,  real-valued targets
+         alpha     scalar regularization constant
+        params     list with cnn parameters
+
+     Outputs:
+            ww1 K, fitted weights (second layer)
+            bb1  , scalar fitted bias (second layer)
+         ww2, DxK, fitted weights (first layer)
+            bb2 K, fitted bias (first layer)
+    """
+    args = (X, yy, alpha)
+    init = params
+
+    ww1, bb1, ww2, bb2 = minimize_list(nn_cost, init, args)
+    return ww1, bb1, ww2, bb2
+
+
+def random_proj(D, K=None, seed=0):
+    """return random projection matrix
+
+    Inputs:
+        D     number of input features
+        K     how many columns to return in projection matrix
+     seed     random number generator seed (default 0)
+
+    Outputs:
+        R D,K matrix to apply to design matrix or other matrices shifted
+              in same way.
+    """
+    if K is None:
+        K = D
+
+    # Generate random numbers
+    rng = np.random.RandomState(seed)
+    R = rng.normal(size=(D, K))
+
+    # Normalise rows
+    R /= np.linalg.norm(R, axis=1, keepdims=True)
+
+    return R
+
+
+
+
