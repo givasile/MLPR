@@ -549,13 +549,13 @@ We present the results in the Figure \ref{fig:val_error}:
 
 \begin{figure}[h]
 \includegraphics[scale=0.8]{val_error.pdf}
-\caption{The black horizontal line on the top, shows the validation error of the best model of the previous questions. The error bars show the standard error of the mean RMSE across the $5$ executions. We observe high overlapping so we cannot easily decide which model is the best, but we can safely suggest the the model with $(s=0.4, K=40, add\_binaries=False)$ has a significant improvement in terms of validation error from the models we had obtained so far.}
+\caption{The black horizontal line on the top, shows the validation error of the best model of the previous questions. The error bars show the standard error of the mean RMSE across the $5$ executions. We observe high overlapping so we cannot easily decide which model is the best, but we can safely suggest the the model with $(s=0.4, K=40, \text{add\_binaries=False})$ show a significant improvement in terms of validation error from the models we had obtained so far.}
 \centering
 \label{fig:val_error}
 \end{figure}
 
 
-The best model in terms of mean RMSE along the 5 different executions has hyperparameters $\sigma=0.4, K=40, \textbf{add\_binaries=False}$ and mean validation RMSE = $0.205$ with standard error $0.0025$
+The best model in terms of mean RMSE along the 5 different executions has hyperparameters $(\sigma=0.4, K=40, \text{add\_binaries=False})$ and mean validation RMSE = $0.205$ with standard error $0.0025$.
 
 This model has a generalisation RMSE in the test set $0.239$ with standard error $0.002$.
 
