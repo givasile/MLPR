@@ -5,10 +5,12 @@ import matplotlib.pyplot as plt
 from ct_support_code import *
 import copy
 import os
-
+import pickle
+import numpy as np
 import matplotlib.pyplot as plt
 import scipy.io as io
-
+plt.rc('text', usetex=True)
+plt.rc('font', **{'family': 'serif', 'serif': ['Computer Modern']})
 from ct_support_code import *
 
 np.random.seed(1)
@@ -348,23 +350,56 @@ inputs = {'X_train': X_train,
           'y_val': y_val,
           'y_test': y_test}
 
-results = []
-params = []
-hyperparams = []
-for ii, s in enumerate(sig):
-    results.append([])
-    params.append([])
-    hyperparams.append([])
-    for jj, k in enumerate(K):
-        results[ii].append([])
-        params[ii].append([])
-        hyperparams[ii].append([])
-        for kk, bin in enumerate(add_binaries):
-            results[ii][jj].append([])
-            params[ii][jj].append([])
-            hyperparams[ii][jj].append([])
-            for n in range(5):
-                tmp = fit_and_RMSE_cnn(s,k,bin,inputs)
-                results[ii][jj][kk].append(tmp[0])
-                params[ii][jj][kk].append(tmp[1])
-                hyperparams[ii][jj][kk].append({'s':s, 'k':k, 'add_binaries':bin, 'n':n})
+# results = []
+# params = []
+# hyperparams = []
+# for ii, s in enumerate(sig):
+#     results.append([])
+#     params.append([])
+#     hyperparams.append([])
+#     for jj, k in enumerate(K):
+#         results[ii].append([])
+#         params[ii].append([])
+#         hyperparams[ii].append([])
+#         for kk, bin in enumerate(add_binaries):
+#             results[ii][jj].append([])
+#             params[ii][jj].append([])
+#             hyperparams[ii][jj].append([])
+#             for n in range(5):
+#                 tmp = fit_and_RMSE_cnn(s,k,bin,inputs)
+#                 results[ii][jj][kk].append(tmp[0])
+#                 params[ii][jj][kk].append(tmp[1])
+#                 hyperparams[ii][jj][kk].append({'s':s, 'k':k, 'add_binaries':bin, 'n':n})
+
+fm = open('./results.p', 'rb')
+q6_results = pickle.load(fm)
+
+RMSE_errors = np.array(q6_results['results'])
+def choose_error(x): return x['RMSE_tr']
+RMSE_tr = np.vectorize(choose_error)(RMSE_errors)
+RMSE_tr_mean = RMSE_tr.mean(-1)
+RMSE_tr_sterror = RMSE_tr.std(-1, ddof=1)/np.sqrt(5)
+def choose_error(x): return x['RMSE_val']
+RMSE_val = np.vectorize(choose_error)(RMSE_errors)
+RMSE_val_mean = RMSE_val.mean(-1)
+RMSE_val_sterror = RMSE_val.std(-1, ddof=1)/np.sqrt(5)
+def choose_error(x): return x['RMSE_test']
+RMSE_test = np.vectorize(choose_error)(RMSE_errors)
+RMSE_test_mean = RMSE_test.mean(-1)
+RMSE_test_sterror = RMSE_test.std(-1, ddof=1)/np.sqrt(5)
+
+q6_argmin = np.unravel_index(np.argmin(RMSE_val_mean, axis=None), RMSE_val_mean.shape)
+
+plt.figure()
+for i, k in enumerate([10, 20, 40, 60]):
+    plt.errorbar(sig, RMSE_val_mean[:, i, 1], RMSE_val_sterror[:, i, 1], label='K='+str(k), marker='o', linestyle='None')
+    # plt.plot(sig, RMSE_val_mean[:, i, 1], 'o-', label = str(k))
+plt.axhline(y=0.25213, xmin=0.05, xmax=0.95, linewidth=1, color = 'k')
+plt.legend()
+plt.xlabel('added noise')
+plt.ylabel('RMSE')
+plt.title('Validation Error')
+# plt.yticks([RMSE_val_mean[argmin]])
+plt.savefig('./presentation/presentation_figures/val_error.pdf')
+plt.show()
+
