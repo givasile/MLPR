@@ -528,5 +528,107 @@ As we can see, both methods produce almost the same results. This means that the
 
 We also observe that the RMSE of the validation set of the model in question 4, is approximately the same with the RMSE of the neural network. Hence, neural network could not learn anything more than the previous model. 
 
+
 \section*{Question 6}
+
+In this section, we thought of not creating a new model from scratch, but taking advantage of the work we have done so far. Thus we tried various ideas that could fit to the already implemented framework, including PCA, different weight initialization, input normalization etc. We observed that the most effective methods, in terms of the validation error, are:
+
+\begin{itemize}
+    \item Add gaussian noise with to the training data $X\_train + \mathcal{N}(0,\sigma^2)$
+    \item Change the units of the hidden layer
+    \item Augment the input matrix $X\_train$ with the binary features of Question $3$
+\end{itemize}\\
+
+The initiatives for testing these ideas was the overfiting we observed in the previous Neural Network models. That is why we added Gaussian noise to the inputs. We also though of experimenting with adding binaries, because of the accuracy increase we observed in question 3. Finally, we tested the increasing the units of the hidden layers. This idea intially conflicts with the observed overfiting, but in combination with adding Gaussian noise, it helps our network to learn more complex representations.
+
+We held an experiment trying all the possible combination of the hyperparameters \\ $$(\sigma, K, \text{adding\_binaries}) \in \{0.3, 0.4, 0.45, 0.5, 0.55, 0.6\}\times \{10, 20, 40, 60\}\times \{True, False\}$$
+
+For each combination of the above hyperparameters, we run the training process $5$ times (independently) and we computed the mean validation error of the $5$ executions and the standard error. Since adding Gaussian Noise and using Random Initialization of the weights make the whole process random, this repetition helps us check the statistical significance of the different errors.
+
+We present the results in the Figure \ref{fig:val_error}:
+
+\begin{figure}[h]
+\includegraphics[scale=0.8]{val_error.pdf}
+\caption{The black horizontal line on the top, shows the validation error of the best model of the previous questions. The error bars show the standard error of the mean RMSE across the $5$ executions. We observe high overlapping so we cannot easily decide which model is the best, but we can safely suggest the the model with $(s=0.4, K=40, add\_binaries=False)$ has a significant improvement in terms of validation error from the models we had obtained so far.}
+\centering
+\label{fig:val_error}
+\end{figure}
+
+
+The best model in terms of mean RMSE along the 5 different executions has hyperparameters $\sigma=0.4, K=40, \textbf{add\_binaries=False}$ and mean validation RMSE = $0.205$ with standard error $0.0025$
+
+This model has a generalisation RMSE in the test set $0.239$ with standard error $0.002$.
+
+
+We provide the code used for holding this experiment:
+
+\begin{lstlisting}[language=Python]
+def fit_and_RMSE_cnn(s, k, add_binaries, inputs):
+    def aug_fn(X): return np.concatenate([X, X == 0, X < 0], axis=1)
+
+    X_train = inputs['X_train']
+    X_val = inputs['X_val']
+    X_test = inputs['X_test']
+    y_train = inputs['y_train']
+    y_val = inputs['y_val']
+    y_test = inputs['y_test']
+    D = X_train.shape[1]
+
+    alpha = 10
+    if add_binaries:
+        X_train = aug_fn(X_train)
+        X_val = aug_fn(X_val)
+        X_test = aug_fn(X_test)
+        D = 3*D
+
+    init_params = (np.random.randn(k), np.array(0), np.random.randn(k, D), np.zeros(k))
+    ww1, bb1, V1, bk1 = fit_cnn_gradopt(X_train + np.random.standard_normal(X_train.shape) * s,
+                                        np.squeeze(y_train), alpha, init_params)
+
+    params = (ww1, bb1, V1, bk1)
+
+    results = {}
+    results['RMSE_tr'] = compute_RMSE_cnn(X_train, y_train, params)
+    results['RMSE_val'] = compute_RMSE_cnn(X_val, y_val, params)
+    results['RMSE_test'] = compute_RMSE_cnn(X_test, y_test, params)
+    return results, params
+
+sig = [0.3, 0.4, 0.45, 0.5, 0.55, 0.6]
+K = [10, 20, 40, 60]
+add_binaries = [True, False]
+inputs = {'X_train': X_train,
+          'X_val': X_val,
+          'X_test': X_test,
+          'y_train': y_train,
+          'y_val': y_val,
+          'y_test': y_test}
+
+results = []
+params = []
+hyperparams = []
+for ii, s in enumerate(sig):
+    results.append([])
+    params.append([])
+    hyperparams.append([])
+    for jj, k in enumerate(K):
+        results[ii].append([])
+        params[ii].append([])
+        hyperparams[ii].append([])
+        for kk, bin in enumerate(add_binaries):
+            results[ii][jj].append([])
+            params[ii][jj].append([])
+            hyperparams[ii][jj].append([])
+            for n in range(5):
+                tmp = fit_and_RMSE_cnn(s,k,bin,inputs)
+                results[ii][jj][kk].append(tmp[0])
+                params[ii][jj][kk].append(tmp[1])
+                hyperparams[ii][jj][kk].append({'s':s, 'k':k, 'add_binaries':bin, 'n':n})
+
+\end{lstlisting}
+
+
+
+
+
+
 \end{document}
